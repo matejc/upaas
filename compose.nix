@@ -1,49 +1,48 @@
 { pkgs ? import <nixpkgs> {}
-, file ? ./stack.nix
-, object ? null
+, containers ? null
+, name ? null
 , lib ? pkgs.lib }:
+with import ./lib.nix { inherit pkgs; };
 let
-  containers =
-    if object == null then import file { inherit pkgs; }
-    else object;
+    any = name: value: level:
+        ["${addPrefix level name}: ${toString value}"];
 
-  prefix = level: str:
-    let
-      tabSize = 2;
-      width = (level * tabSize) + (lib.stringLength str);
-    in
-      lib.fixedWidthString width " " str;
+    int = any;
 
-  path = name: container:
-    lib.optionals
-    (builtins.hasAttr name container)
-    ["${prefix 1 name}: ${toString (builtins.getAttr name container)}"];
+    path = any;
 
-  string = name: container:
-    lib.optionals
-    (builtins.hasAttr name container)
-    ["${prefix 1 name}: \"${toString (builtins.getAttr name container)}\""];
+    bool = name: value: level:
+        ["${addPrefix level name}: ${if value then "true" else "false"}"];
 
-  list = name: container:
-    lib.optionals
-    (builtins.hasAttr name container)
-    (["${prefix 1 name}:"] ++ (map (entry: prefix 2 "- \"${toString entry}\"") (builtins.getAttr name container)));
+    string = name: value: level:
+        ["${addPrefix level name}: \"${value}\""];
 
-  containerLines = container:
-    (lib.mapAttrsToList (n: v:
-      if lib.isString v then string n container
-      else if lib.isList v then list n container
-      else if (builtins.typeOf v) == "path" then path n container
-      else throw "Attribute with name ${n} has unsupported type (${builtins.typeOf v})!"
-    ) (lib.filterAttrs (n: v: n != "name") container));
+    list = name: value: level:  # TODO: nested
+        (["${addPrefix level name}:"] ++ (map (entry: addPrefix (level+1) "- \"${toString entry}\"") value));
 
-  exclude = v:
-    if builtins.hasAttr "exclude" v then v.exclude else false;
+    attrs = name: value: level:
+        ["${addPrefix level name}:"] ++ (lib.mapAttrsToList (n: v:
+            getStrings n v (level+1)
+        ) value);
 
-  lines = map (container:
-    ["${container.name}:"] ++ (containerLines container)
-  ) containers;
+    getStrings = n: v: level:
+        if lib.isString v then string n v level
+        else if lib.isInt v then int n v level
+        else if lib.isBool v then bool n v level
+        else if lib.isList v then list n v level
+        else if (builtins.typeOf v) == "path" then path n v level
+        else if lib.isAttrs v then attrs n v level
+        else throw "Attribute with name ${n} has unsupported type (${builtins.typeOf v})!";
 
-  output = lib.concatStringsSep "\n" (lib.flatten lines);
+    containerLines = container:
+        lib.mapAttrsToList (n: v:
+            getStrings n v 1
+        ) container;
+
+    lines = lib.mapAttrsToList (name: container:
+        ["${name}:"] ++ (containerLines container)
+    ) containers;
+
+    output = lib.concatStringsSep "\n" (lib.flatten lines);
 in
-  pkgs.writeText "docker-compose.yml" output
+    pkgs.writeText "docker-compose-${name}.yml" output

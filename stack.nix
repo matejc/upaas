@@ -1,29 +1,27 @@
-{ pkgs }:
-[
-    {
-        name = "searxOne";
-        enable = false;
-        compose = [
-          {
-            name = "searx-one";
-            build = /home/matejc/workarea/searx;
-            ports = [
-              "7777:8888"
-            ];
-          }
-        ];
-    }
-    {
-        name = "searxTwo";
-        enable = false;
-        compose = [
-          {
-            name = "searx-two";
-            build = /home/matejc/workarea/searx;
-            ports = [
-              "7778:8888"
-            ];
-          }
-        ];
-    }
-]
+{ pkgs, vars }:
+rec {
+    searxOne = {
+        enable = true;
+        autostart = false;
+        compose = {
+            searx-one = {
+                build = vars.searxPath;
+                ports = [
+                    "7777:8888"
+                ];
+            };
+        };
+    };
+    searxTwo = {
+        enable = true;
+        autostart = true;
+        compose = {
+            searx-two = {
+                build = vars.searxPath;
+                ports = [
+                    "7778:8888"
+                ];
+            };
+        };
+    };
+}
