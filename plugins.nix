@@ -1,4 +1,4 @@
-{ pkgs, lib ? pkgs.lib, config, stateDir }:
+{ pkgs, lib ? pkgs.lib, config, dataDir, loggerPort }:
 with import ./lib.nix { inherit pkgs; };
 let
     plugins = lib.mapAttrsToList (name: p:
@@ -6,7 +6,7 @@ let
             import p.path {
                 pluginConfig = p;
                 inherit (config) vars user;
-                inherit pkgs name stateDir;
+                inherit pkgs name dataDir loggerPort;
             }
         )
     ) (enabledAttrs config.plugins);
@@ -14,13 +14,16 @@ let
     serviceDefaults = name: {
         user = config.user;
         redirect_stderr = true;
-        stdout_logfile = "${stateDir}/logs/plugin-${name}.log";
+        stdout_logfile = "${dataDir}/logs/plugin-${name}.log";
     };
 
-    setupPlugin = name: plugin: {
-        inherit name;
-        service =
-            programToString name ((serviceDefaults name) // plugin.service);
+    setupPlugin = name: plugin:
+    let
+        service = programToString name ((serviceDefaults name) // plugin.service);
+        hash = unique service;
+    in {
+        inherit name service hash;
+        inherit (plugin) test;
     };
 in
     plugins

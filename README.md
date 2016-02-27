@@ -1,7 +1,7 @@
 Mini PAAS
 =========
 
-DO NOT USE IN PRODUCTION
+
 
 Mini Declarative PAAS System
 
@@ -27,6 +27,7 @@ Requirements
 Technologies
 ------------
 
+- Docker
 - Docker Compose
 - Nix
 - Supervisord

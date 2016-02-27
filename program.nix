@@ -19,7 +19,7 @@ let
         [("${name}="+(lib.concatMapStringsSep "," (entry: "${toString entry}") value))];
 
     attrs = name: value:
-        [("${name}=" + lib.concatMapStringsSep "," (lib.mapAttrsToList (n: v: "${n}=\"${toString v}\"") value))];
+        [("${name}="+(lib.concatStringsSep "," (lib.mapAttrsToList (n: v: "${n}=\"${toString v}\"") value)))];
 
     getStrings = n: v:
       if lib.isString v then string n v
