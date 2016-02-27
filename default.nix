@@ -30,17 +30,17 @@ let
         else if c ? compose then
             compose name c.compose
         else
-            builtins.throw "No composeFile and compose defined at ${name}!";
+            builtins.throw "No composeFile or compose defined at ${name}!";
 
     generate =
     let
         composes = enabledAttrs stack;
     in
-        lib.mapAttrsToList (n: c: rec {
+        lib.mapAttrs (n: c: rec {
             name = n;
             yml = getComposeYml n c;
             autostart = c.autostart || false;
-            hash = unique yml;
+            hash = unique [ n yml ];
         }) composes;
 
     writeScript = name: script:
@@ -53,15 +53,30 @@ let
 
     buildAllScript = manifest:
         writeScript "build-all" (
-            lib.concatMapStringsSep
+            concatMapAttrsStringsSep
             "\n"
-            (e: "${buildScript e}/bin/*")
+            (n: e: "${buildScript e}/bin/*")
             manifest
         );
 
     buildScript = e:
         writeScript "build-${e.name}" ''
-            ${docker_compose}/bin/docker-compose -f '${e.yml}' build --pull
+            test "${e.hash}" = "${uniqueFromManifest e.name "${dataDir}/.previous.manifest.json"}" || {
+                echo "Building ${e.name} ...";
+                ${docker_compose}/bin/docker-compose -f '${e.yml}' build --pull ;
+            }
+        '';
+
+    updateScript = e: supervisorConf:
+        writeScript "update-${e.name}" ''
+            ${buildScript e}/bin/*
+            ${restartStackScript e supervisorConf}/bin/*
+        '';
+
+    restartStackScript = e: supervisorConf:
+        writeScript "restart-${e.name}" ''
+            echo "Restarting ${e.name} ..."
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} restart stack:${e.name}
         '';
 
     shellrc =
@@ -124,10 +139,13 @@ let
 
             test -f $CONFIG || { echo "You must specify existing config file as first argument!"; false; }
 
+            cp -f ${profileDir}/build/share/manifest.json ${dataDir}/.previous.manifest.json
+
             nix-env -f "${dataDir}/src/default.nix" -A build -i \
                 -p ${profileDir}/build \
                 --argstr user "`id -un`" \
-                --argstr configFile "$CONFIG"
+                --argstr configFile "$CONFIG" \
+                --show-trace
 
             ${profileDir}/build/bin/build-all || { "Build failed!"; false; }
 
@@ -144,11 +162,11 @@ let
         writeScript "update-all" ((
             lib.concatMapStringsSep
             "\n"
-            (e: e.test)
+            (e: "echo 'Running pre-start for plugin ${e.name}'\n${e.preStart}")
             plugins
         ) + ''
 
-            ${supervisor}/bin/supervisorctl -c ${supervisorConf} update || echo "Have you forgot to run 'upaas-start'?"
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} update || { echo "Have you forgot to run 'upaas-start'?"; false; }
         '');
 
     makeBuild =
@@ -157,7 +175,7 @@ let
         manifestFile = manifestFileFun manifest;
         supervisorConf = supervisorConfFun manifest;
     in
-        stdenv.mkDerivation rec {
+        stdenv.mkDerivation {
             name = "${prefix}-build";
             buildInputs = [ pkgs.makeWrapper ];
             buildCommand = (''
@@ -178,11 +196,13 @@ let
                 ln -s ${updateAllScript plugins supervisorConf}/bin/* $out/bin
 
             '' + (
-                lib.concatMapStringsSep
+                concatMapAttrsStringsSep
                 "\n"
-                (e: ''
+                (n: e: ''
                     ln -s ${e.yml} $out/share/docker-compose-${e.name}.yml
                     ln -s ${buildScript e}/bin/* $out/bin
+                    ln -s ${restartStackScript e supervisorConf}/bin/* $out/bin
+                    ln -s ${updateScript e supervisorConf}/bin/* $out/bin
                     ln -s ${logScript e supervisorConf}/bin/* $out/bin
                 '')
                 manifest
@@ -190,7 +210,9 @@ let
         };
 
     manifestFileFun = manifest:
-        pkgs.writeText "${prefix}-manifest.json" (builtins.toJSON manifest);
+        pkgs.writeText "${prefix}-manifest.json" (builtins.toJSON
+            manifest
+        );
 
     supervisorConfFun = manifest:
         pkgs.writeText "supervisor.conf" (''
@@ -212,12 +234,12 @@ let
             programs=${lib.concatMapStringsSep "," (e: e.name) plugins}
             priority=3
 
-            [group:maintenance]
-            programs=logger
+            [group:stack]
+            programs=${concatMapAttrsStringsSep "," (n: e: "${e.name}") manifest}
             priority=2
 
-            [group:stack]
-            programs=${lib.concatMapStringsSep "," (e: "${e.name}_${e.hash}") manifest}
+            [group:essetntial]
+            programs=logger
             priority=1
 
             [program:logger]
@@ -230,10 +252,10 @@ let
             stdout_logfile=${dataDir}/logs/logger.log
 
             '' + (
-                lib.concatMapStringsSep
+                concatMapAttrsStringsSep
                 "\n"
-                (e: ''
-                    [program:${e.name}_${e.hash}]
+                (n: e: ''
+                    [program:${e.name}]
                     command=${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.yml}' up
                     stopsignal=INT
                     stopwaitsecs=20

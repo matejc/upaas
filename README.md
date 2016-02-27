@@ -45,7 +45,7 @@ Install to /var/upass folder, everything required will be there so make the fold
 ./install.sh
 ```
 
-Now you are going to need `config.nix` and `stack.nix` (take a look in the repository for examples). Inside stack.nix, compose object is actually comparable to docker-compose - the same options, or if you prefer you can use `composeFile` instead to specify absolute path to the regular `docker-compose.yml` file.
+Now you are going to need `config.nix` and `stack.nix` (take a look in the repository for examples). Inside `stack.nix`, compose object is actually comparable to docker-compose - the same options, or if you prefer you can use `composeFile` instead to specify absolute path to the regular `docker-compose.yml` file.
 
 To rebuild (build and rerun changed services) from your configuration file, use this command, the path to configuration file has to be absolute
 ```

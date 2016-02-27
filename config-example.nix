@@ -20,16 +20,16 @@ rec {
             };
         };
         webhooks = {
-            enable = false;
+            enable = true;
             path = ./plugins/webhooks.nix;
+            listen = "8888";
             config = {
-                upgrade-searx = {
+                upgradeSearx = {
                     key = "someVeryLongSecret";
                     cmd = [
-                        "${pkgs.git}/bin/git -C ${vars.searxPath} pull"
-                        "mini-paas-build-searxOne"
-                        "mini-paas-build-searxTwo"
-                        "mini-paas-update-all"
+                        "${pkgs.git}/bin/git -C ${vars.searxPath} status"
+                        "update-searxOne"
+                        "update-searxTwo"
                     ];
                 };
             };

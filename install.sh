@@ -26,5 +26,5 @@ test -w "$DATA_DIR/src" || { echo "$DATA_DIR/src is not writable by `id -un`!"; 
 
 cp -fauv ./* "$DATA_DIR/src"
 
-nix-env -f "$DATA_DIR/src/default.nix" -A env --argstr dataDir "$DATA_DIR" --argstr user "`id -un`" -i \
+nix-env -f "$DATA_DIR/src/default.nix" -A env --argstr dataDir "$DATA_DIR" --argstr user "`id -un`" -i --show-trace \
     && echo -e "\nExecute 'upaas-rebuild ./some/config.nix' to rebuild the environment from config file"

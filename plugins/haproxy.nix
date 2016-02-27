@@ -71,9 +71,9 @@ let
         /*user = "root";*/
     };
 
-    test = ''
+    preStart = ''
         ${pkgs.haproxy}/sbin/haproxy -f ${haproxyConf} -c
     '';
 in {
-    inherit service test;
+    inherit service preStart;
 }

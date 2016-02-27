@@ -20,10 +20,10 @@ let
     setupPlugin = name: plugin:
     let
         service = programToString name ((serviceDefaults name) // plugin.service);
-        hash = unique service;
+        hash = unique plugin.service.command;
     in {
         inherit name service hash;
-        inherit (plugin) test;
+        inherit (plugin) preStart;
     };
 in
     plugins

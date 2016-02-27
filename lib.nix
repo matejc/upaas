@@ -25,4 +25,17 @@ rec {
             str = builtins.hashString "sha1" (toString value);
         in
             lib.substring 0 10 str;
+
+    loadJSON = file:
+        builtins.fromJSON (builtins.readFile file);
+
+    uniqueFromManifest = name: file:
+        let
+            o = (loadJSON file);
+            hasEntry = if lib.isAttrs o then builtins.hasAttr name o else false;
+        in
+            unique [
+                name
+                (if hasEntry then (builtins.getAttr name o).yml else "")
+            ];
 }
