@@ -1,9 +1,7 @@
-Mini PAAS
-=========
+Micro PAAS
+==========
 
-
-
-Mini Declarative PAAS System
+Micro Declarative PAAS System
 
 Want to duplicate a machine? Easy! Everything is in configuration files!
 
@@ -11,7 +9,7 @@ Minimum system intrusion for a PAAS system. Nix installs everything automaticall
 
 Write your own plug-in.
 
-Everything can be run without root if using ports above 1024.
+Micro PAAS can be run without root if using ports above 1024.
 
 Do not like it? Copy your Dockerfile-s, docker-compose-${name}.yml files and you can switch, fast.
 
