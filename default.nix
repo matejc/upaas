@@ -22,7 +22,7 @@ let
     loggerPort = if config ? loggerPort then config.loggerPort else "2000";
 
     compose = name: containers:
-    import ./compose.nix { inherit pkgs name containers; };
+        import ./compose.nix { inherit pkgs name containers; };
 
     getComposeYml = name: c:
         if c ? composeFile then
@@ -129,10 +129,13 @@ let
                 --argstr user "`id -un`" \
                 --argstr configFile "$CONFIG"
 
+            ${profileDir}/build/bin/build-all || { "Build failed!"; false; }
 
-            ${profileDir}/build/bin/build-all || { "Build failed!"; false;}
-
-            ${profileDir}/build/bin/update-all || { "Update failed!"; false;}
+            if [ -S ${dataDir}/supervisor.sock ]; then
+                ${profileDir}/build/bin/update-all || { "Update failed!"; false; }
+            else
+                ${prefix}-start || { "Start failed!"; false; }
+            fi
 
             echo "Done!"
         '';
@@ -145,7 +148,7 @@ let
             plugins
         ) + ''
 
-            ${supervisor}/bin/supervisorctl -c ${supervisorConf} update || echo "Have you forgot to run 'init'?"
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} update || echo "Have you forgot to run 'upaas-start'?"
         '');
 
     makeBuild =

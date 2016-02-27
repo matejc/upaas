@@ -1,6 +1,6 @@
 { pkgs }:
 rec {
-    stack = ./stack.nix;
+    stack = ./stack-example.nix;
     user = "matejc";
     vars = {
         searxPath = /home/matejc/workarea/searx;

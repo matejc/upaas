@@ -7,14 +7,15 @@ set -e
 if [ "`id -u`" -eq "0" ]; then
     echo "WARNING: You are root; if you are not planning to use ports below 1024 you do not have to be root!"
     echo "Are you sure you want to continue as root? y/[n]"
-    test "`read -e`" -eq "y"
+    read -r -n 1 -s answer
+    test "$answer" = "y"
 fi
-
-mkdir -p "$DATA_DIR/{src,profile}"
 
 if [ "$1" = "-v" ]; then
     set -x
 fi
+
+mkdir -p "$DATA_DIR/src"
 
 # check if nix is available
 hash nix-env 2>/dev/null \
