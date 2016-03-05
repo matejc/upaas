@@ -4,6 +4,7 @@ let
     haproxyConf = pkgs.writeText "haproxy.conf" (''
         global
             log 127.0.0.1:${loggerPort} local0 notice
+            tune.ssl.default-dh-param 2048
             ${if pluginConfig ? extraGlobal then pluginConfig.extraGlobal else ""}
 
         defaults
@@ -44,7 +45,7 @@ let
         ) backends}
 
     '')
-    ) domains) pluginConfig.http
+    ) domains) (lib.optionalAttrs (pluginConfig?http) pluginConfig.http)
     +
     concatMapAttrsStringsSep "\n" (bind: backends:
         let
@@ -61,7 +62,7 @@ let
         ${lib.concatImapStringsSep "\n" (i: backend:
             "    server server_${toString i} ${backend}"
         ) backends}
-    '') pluginConfig.tcp
+    '') (lib.optionalAttrs (pluginConfig?tcp) pluginConfig.tcp)
     );
 
     service = {
