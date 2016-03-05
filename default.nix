@@ -143,7 +143,8 @@ let
 
             test -f $CONFIG || { echo "You must specify existing config file as first argument!"; false; }
 
-            cp -f ${profileDir}/build/share/manifest.json ${dataDir}/.previous.manifest.json
+            test -f ${profileDir}/build/share/manifest.json && cp -f ${profileDir}/build/share/manifest.json ${dataDir}/.previous.manifest.json
+            test -f ${profileDir}/build/share/manifest.json || echo '{}' > ${dataDir}/.previous.manifest.json
 
             nix-env -f "${dataDir}/src/default.nix" -A build -i \
                 -p ${profileDir}/build \
@@ -151,12 +152,12 @@ let
                 --argstr configFile "$CONFIG" \
                 --show-trace
 
-            ${profileDir}/build/bin/build-all || { "Build failed!"; false; }
+            ${profileDir}/build/bin/build-all || { echo "Build failed!"; echo '{}' > ${dataDir}/.previous.manifest.json; false; }
 
             if [ -S ${dataDir}/supervisor.sock ]; then
-                ${profileDir}/build/bin/update-all || { "Update failed!"; false; }
+                ${profileDir}/build/bin/update-all || { echo "Update failed!"; false; }
             else
-                ${prefix}-start || { "Start failed!"; false; }
+                ${prefix}-start || { echo "Start failed!"; false; }
             fi
 
             echo "Done!"
