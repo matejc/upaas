@@ -15,9 +15,9 @@ let
             server {
                 listen ${toString pluginConfig.listen};
                 location = / {
-                    content_by_lua_block {
+                    content_by_lua '
 
-                        local sha2 = require 'sha2'
+                        local sha2 = require "sha2"
 
                         function exec(cmd)
                             f = io.popen(cmd.." 2>&1")
@@ -35,7 +35,7 @@ let
                         if ngx.var.arg_name and ngx.var.arg_key then
                             hash = sha2.hash256(ngx.var.arg_key)
                             for line in io.lines("${keys}") do
-                                match = string.match(line, ngx.var.arg_name..' '..hash..' ')
+                                match = string.match(line, ngx.var.arg_name.." "..hash.." ")
                                 if match then
                                     exec(string.sub(line, string.len(match)+1))
                                     return ngx.exit(ngx.HTTP_OK)
@@ -43,7 +43,7 @@ let
                             end
                             return ngx.exit(ngx.HTTP_FORBIDDEN)
                         end
-                    }
+                    ';
                 }
             }
         }
@@ -51,7 +51,7 @@ let
 
     keys = pkgs.writeText "webhooks.keys" (
         concatMapAttrsStringsSep "\n" (name: entry:
-            ''${name} ${builtins.hashString "sha256" entry.key} PATH="${dataDir}/profile/build/bin:$PATH" ${pkgs.stdenv.shell} -c "${lib.concatStringsSep " && " entry.cmd}"''
+            ''${name} ${builtins.hashString "sha256" entry.key} ${pkgs.stdenv.shell} -l -c "${lib.concatStringsSep " && " entry.cmd}"''
         ) pluginConfig.config
     );
 
@@ -312,6 +312,7 @@ let
         mkdir -p ${dataDir}/webhooks/logs
         ln -sf ${sha2Lua} ${dataDir}/webhooks/sha2.lua
         ln -sf ${keys} ${dataDir}/webhooks/keys
+        ${pkgs.openresty}/bin/nginx -t -c ${nginxConf} -p ${dataDir}/webhooks
     '';
 in {
     inherit service preStart;
