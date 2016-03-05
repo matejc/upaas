@@ -48,6 +48,8 @@ let
             #!${stdenv.shell} -e
             export PATH="${pkgs.busybox}/bin:$PATH"
 
+            test -v DEBUG && set -x
+
             ${script}
         '';
 
