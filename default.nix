@@ -243,7 +243,7 @@ let
             programs=${concatMapAttrsStringsSep "," (n: e: "${e.name}") manifest}
             priority=2
 
-            [group:essetntial]
+            [group:essential]
             programs=logger
             priority=1
 
