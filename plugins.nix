@@ -2,11 +2,14 @@
 with import ./lib.nix { inherit pkgs; };
 let
     plugins = lib.mapAttrsToList (name: p:
+        let
+            user = if p ? user then p.user else config.user;
+        in
         setupPlugin name (
             import p.path {
                 pluginConfig = p;
-                inherit (config) vars user;
-                inherit pkgs name dataDir loggerPort;
+                inherit (config) vars;
+                inherit pkgs name dataDir loggerPort user;
             }
         )
     ) (enabledAttrs config.plugins);

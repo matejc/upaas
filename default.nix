@@ -20,6 +20,8 @@ let
         inherit pkgs config dataDir loggerPort;
     };
     loggerPort = if config ? loggerPort then config.loggerPort else "2000";
+    stackUser = if config ? stackUser then config.stackUser else user;
+    loggerUser = if config ? loggerUser then config.loggerUser else user;
 
     compose = name: containers:
         import ./compose.nix { inherit pkgs name containers; };
@@ -247,7 +249,7 @@ let
             [program:logger]
             command=${pkgs.socat}/bin/socat -u UDP-RECV:${toString loggerPort} -
             stopsignal=INT
-            user=${user}
+            user=${loggerUser}
             autorestart=true
             autostart=true
             redirect_stderr=true
@@ -261,7 +263,7 @@ let
                     command=${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.yml}' up
                     stopsignal=INT
                     stopwaitsecs=20
-                    user=${user}
+                    user=${stackUser}
                     autorestart=true
                     autostart=${if e.autostart then "true" else "false"}
                     redirect_stderr=true

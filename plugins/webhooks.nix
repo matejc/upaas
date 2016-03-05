@@ -5,6 +5,9 @@ let
         worker_processes 1;
         daemon off;
 
+        error_log stderr;
+        user ${user};
+
         events {
             worker_connections 1024;
         }
