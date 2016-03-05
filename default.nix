@@ -47,7 +47,7 @@ let
 
     writeScript = name: script:
         pkgs.writeScriptBin "${name}" ''
-            #!${stdenv.shell} -e
+            #!${shell} -e
             export PATH="${pkgs.busybox}/bin:$PATH"
 
             test -v DEBUG && set -x
@@ -65,10 +65,13 @@ let
 
     buildScript = e:
         writeScript "build-${e.name}" ''
-            test "${e.hash}" = "${uniqueFromManifest e.name "${dataDir}/.previous.manifest.json"}" || {
+            if [[ "${e.hash}" == "${uniqueFromManifest e.name "${dataDir}/.previous.manifest.json"}" ]]
+            then
+                echo "Skip build of ${e.name}.";
+            else
                 echo "Building ${e.name} ...";
-                ${docker_compose}/bin/docker-compose -f '${e.yml}' build --pull ;
-            }
+                ${docker_compose}/bin/docker-compose -f '${e.yml}' build
+            fi
         '';
 
     updateScript = e: supervisorConf:
@@ -80,7 +83,7 @@ let
     restartStackScript = e: supervisorConf:
         writeScript "restart-${e.name}" ''
             echo "Restarting ${e.name} ..."
-            ${supervisor}/bin/supervisorctl -c ${supervisorConf} restart stack:${e.name}
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} restart stack-${e.name}
         '';
 
     shellrc =
@@ -96,12 +99,12 @@ let
             PROFILE="${profileDir}/build/bin"
             export PROFILE
 
-            EXTRA="''$*"
-            if [[ -n "$EXTRA" ]]; then
-                EXTRA="-c \"$EXTRA\""
+            if [[ "x$@" == "x" ]]
+            then
+                PATH="$PROFILE:${pkgs.busybox}/bin" ${shell} --rcfile ${shellrc}
+            else
+                echo "'$@'" | PATH="$PROFILE:${pkgs.busybox}/bin" xargs ${shell} --rcfile ${shellrc} -c
             fi
-
-            PATH="$PROFILE:${pkgs.busybox}/bin" ${shell} --rcfile ${shellrc} $EXTRA
         '';
 
     startScript =
@@ -131,7 +134,7 @@ let
 
     logScript = e: supervisorConf:
         writeScript "log-${e.name}" ''
-            ${supervisor}/bin/supervisorctl -c ${supervisorConf} tail -f stack:${e.name}
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} tail -f stack-${e.name}
         '';
 
     rebuildScript =
@@ -143,7 +146,6 @@ let
 
             test -f $CONFIG || { echo "You must specify existing config file as first argument!"; false; }
 
-            test -f ${profileDir}/build/share/manifest.json && cp -f ${profileDir}/build/share/manifest.json ${dataDir}/.previous.manifest.json
             test -f ${profileDir}/build/share/manifest.json || echo '{}' > ${dataDir}/.previous.manifest.json
 
             nix-env -f "${dataDir}/src/default.nix" -A build -i \
@@ -159,6 +161,8 @@ let
             else
                 ${prefix}-start || { echo "Start failed!"; false; }
             fi
+
+            test -f ${profileDir}/build/share/manifest.json && cp -f ${profileDir}/build/share/manifest.json ${dataDir}/.previous.manifest.json
 
             echo "Done!"
         '';
@@ -235,18 +239,6 @@ let
             [rpcinterface:supervisor]
             supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
-            [group:plugins]
-            programs=${lib.concatMapStringsSep "," (e: e.name) plugins}
-            priority=3
-
-            [group:stack]
-            programs=${concatMapAttrsStringsSep "," (n: e: "${e.name}") manifest}
-            priority=2
-
-            [group:essential]
-            programs=logger
-            priority=1
-
             [program:logger]
             command=${pkgs.socat}/bin/socat -u UDP-RECV:${toString loggerPort} -
             stopsignal=INT
@@ -260,7 +252,7 @@ let
                 concatMapAttrsStringsSep
                 "\n"
                 (n: e: ''
-                    [program:${e.name}]
+                    [program:stack-${e.name}]
                     command=${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.yml}' up
                     stopsignal=INT
                     stopwaitsecs=20
@@ -275,7 +267,7 @@ let
                 lib.concatMapStringsSep
                 "\n"
                 (e: ''
-                    [program:${e.name}]
+                    [program:plugin-${e.name}]
                     ${e.service}
                 '') plugins
             )

@@ -18,9 +18,7 @@ let
     +
     concatMapAttrsStringsSep "\n" (bind: v:
         let
-            domains = if v ? cert then
-                lib.filterAttrs (n: a: n != "cert") v
-                else v;
+            domains = lib.filterAttrs (n: a: n != "cert" && n != "extra") v;
             cert = if v ? cert then
                 "ssl crt ${toString v.cert}"
                 else "";
@@ -29,19 +27,22 @@ let
             bind ${bind} ${cert}
             mode http
             option httplog
-            ${concatMapAttrsStringsSep "\n" (domain: b:
-                "acl is_${unique domain} hdr_dom(host) -i ${domain}"
-            ) domains}
 
-            ${concatMapAttrsStringsSep "\n" (domain: backends:
-                "use_backend cluster_${unique backends} if is_${unique domain}"
-            ) domains}
+        ${concatMapAttrsStringsSep "\n" (domain: b:
+            "    acl is_${unique domain} hdr_dom(host) -i ${domain}"
+        ) domains}
+
+        ${concatMapAttrsStringsSep "\n" (domain: backends:
+            "    use_backend cluster_${unique backends} if is_${unique domain}"
+        ) domains}
+
+            ${lib.optionalString (v ? extra) v.extra}
 
     '' + (concatMapAttrsStringsSep "\n" (d: backends: ''
         backend cluster_${unique backends}
             mode http
         ${lib.concatImapStringsSep "\n" (i: backend:
-            "    server server_${toString i} ${backend}"
+        "    server server_${toString i} ${backend}"
         ) backends}
 
     '')
@@ -69,7 +70,6 @@ let
         command = "${pkgs.haproxy}/sbin/haproxy -f ${haproxyConf}";
         autostart = true;
         autorestart = true;
-        /*user = "root";*/
     };
 
     preStart = ''

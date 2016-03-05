@@ -4,16 +4,14 @@ DATA_DIR="${DATA_DIR:-/var/upaas}"
 
 set -e
 
-if [ "`id -u`" -eq "0" ]; then
+if [[ "`id -u`" == "0" && "$1" != "-f" ]]; then
     echo "WARNING: You are root; if you are not planning to use ports below 1024 you do not have to be root!"
     echo "Are you sure you want to continue as root? y/[n]"
     read -r -n 1 -s answer
     test "$answer" = "y"
 fi
 
-if [ "$1" = "-v" ]; then
-    set -x
-fi
+test -v DEBUG && set -x
 
 mkdir -p "$DATA_DIR/src"
 

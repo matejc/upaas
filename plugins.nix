@@ -5,7 +5,7 @@ let
         let
             user = if p ? user then p.user else config.user;
         in
-        setupPlugin name (
+        setupPlugin name user (
             import p.path {
                 pluginConfig = p;
                 inherit (config) vars;
@@ -14,15 +14,15 @@ let
         )
     ) (enabledAttrs config.plugins);
 
-    serviceDefaults = name: {
-        user = config.user;
+    serviceDefaults = name: user: {
+        inherit user;
         redirect_stderr = true;
         stdout_logfile = "${dataDir}/logs/plugin-${name}.log";
     };
 
-    setupPlugin = name: plugin:
+    setupPlugin = name: user: plugin:
     let
-        service = programToString name ((serviceDefaults name) // plugin.service);
+        service = programToString name ((serviceDefaults name user) // plugin.service);
         hash = unique plugin.service.command;
     in {
         inherit name service hash;
