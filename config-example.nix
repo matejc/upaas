@@ -34,5 +34,20 @@ rec {
                 };
             };
         };
+        git2docker = {
+            enable = true;
+            path = ./plugins/git2docker/plugin.nix;
+            listen = "10000";
+            username = "git2docker";
+            password = "someVeryLongSecret";
+            config = {
+                searx = {
+                    branch = "master";
+                    cmd = [
+                        "update-searxOne"
+                    ];
+                };
+            };
+        };
     };
 }

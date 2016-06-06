@@ -5,7 +5,7 @@ rec {
         autostart = true;
         compose = {
             searx-one = {
-                build = vars.searxPath;
+                image = "searx:master";
                 ports = [
                     "7777:8888"
                 ];
