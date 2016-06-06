@@ -101,8 +101,16 @@ let
     shellrc =
         pkgs.writeText "shellrc" ''
             export PS1="> "
+
             profile_commands="`ls -1 $PROFILE`"
             complete -E -W "$profile_commands"
+
+            LS_CMD="`which ls`"
+            function _list_logs {
+                COMPREPLY=($(compgen -W "`$LS_CMD -1 ${dataDir}/logs`" -- "''${COMP_WORDS[COMP_CWORD]}"))
+            }
+            complete -F _list_logs log
+
             export PATH=$PROFILE
         '';
 
@@ -144,9 +152,10 @@ let
             tail -f ${dataDir}/logs/supervisord.log
         '';
 
-    logScript = e: supervisorConf:
-        writeScript "log-${e.name}" ''
-            ${supervisor}/bin/supervisorctl -c ${supervisorConf} tail -f stack-${e.name}
+    logScript =
+        writeScript "log" ''
+            test -f "${dataDir}/logs/$@"
+            tail -f "${dataDir}/logs/$@"
         '';
 
     rebuildScript =
@@ -216,6 +225,9 @@ let
 
                 ln -s ${updateAllScript plugins supervisorConf}/bin/* $out/bin
 
+                ln -s ${logScript}/bin/* $out/bin
+
+
             '' + (
                 concatMapAttrsStringsSep
                 "\n"
@@ -226,7 +238,6 @@ let
                     ln -s ${startStackScript e supervisorConf}/bin/* $out/bin
                     ln -s ${stopStackScript e supervisorConf}/bin/* $out/bin
                     ln -s ${updateScript e supervisorConf}/bin/* $out/bin
-                    ln -s ${logScript e supervisorConf}/bin/* $out/bin
                 '')
                 manifest
             ));
