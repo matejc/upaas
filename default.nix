@@ -286,6 +286,7 @@ let
                     autostart=${if e.autostart then "true" else "false"}
                     redirect_stderr=true
                     stdout_logfile=${dataDir}/logs/stack-${e.name}.log
+                    startsecs=10
 
                 '') manifest
             ) + (
