@@ -86,6 +86,18 @@ let
             ${supervisor}/bin/supervisorctl -c ${supervisorConf} restart stack-${e.name}
         '';
 
+    stopStackScript = e: supervisorConf:
+        writeScript "stop-${e.name}" ''
+            echo "Stop ${e.name} ..."
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} stop stack-${e.name}
+        '';
+
+    startStackScript = e: supervisorConf:
+        writeScript "start-${e.name}" ''
+            echo "Start ${e.name} ..."
+            ${supervisor}/bin/supervisorctl -c ${supervisorConf} start stack-${e.name}
+        '';
+
     shellrc =
         pkgs.writeText "shellrc" ''
             export PS1="> "
@@ -211,6 +223,8 @@ let
                     ln -s ${e.yml} $out/share/docker-compose-${e.name}.yml
                     ln -s ${buildScript e}/bin/* $out/bin
                     ln -s ${restartStackScript e supervisorConf}/bin/* $out/bin
+                    ln -s ${startStackScript e supervisorConf}/bin/* $out/bin
+                    ln -s ${stopStackScript e supervisorConf}/bin/* $out/bin
                     ln -s ${updateScript e supervisorConf}/bin/* $out/bin
                     ln -s ${logScript e supervisorConf}/bin/* $out/bin
                 '')
