@@ -22,10 +22,11 @@ let
 
     setupPlugin = name: user: plugin:
     let
-        service = programToString name ((serviceDefaults name user) // plugin.service);
+        serviceOptions = (serviceDefaults name user) // plugin.service;
+        service = programToString name options;
         hash = unique plugin.service.command;
     in {
-        inherit name service hash;
+        inherit name service hash serviceOptions;
         inherit (plugin) preStart;
     };
 in
