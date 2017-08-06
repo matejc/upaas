@@ -13,8 +13,8 @@ let
     shell = "${pkgs.bashInteractive}/bin/bash";
     user = cfg.user;
 
-    configuration = import cfg.configurationPath { inherit pkgs; } // { inherit user; };
-    stack = import configuration.stack { inherit pkgs; inherit (configuration) vars; };
+    configuration = (if builtins.typeOf cfg.configuration == "set" then cfg.configuration else import cfg.configuration { inherit pkgs; }) // { inherit user; };
+    stack = if builtins.typeOf configuration.stack == "set" then configuration.stack else import configuration.stack { inherit pkgs; inherit (configuration) vars; };
     plugins = import ./plugins.nix {
         inherit pkgs dataDir loggerPort;
         config = configuration;
@@ -113,9 +113,9 @@ in {
           '';
         };
 
-        configurationPath = mkOption {
-          type = types.path;
-          description = "Configuration file path.";
+        configuration = mkOption {
+          type = types.either types.attrs types.path;
+          description = "Configuration or path.";
         };
 
         user = mkOption {
