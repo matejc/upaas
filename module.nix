@@ -23,10 +23,10 @@ let
     stackUser = if configuration ? stackUser then configuration.stackUser else user;
     loggerUser = if configuration ? loggerUser then configuration.loggerUser else user;
 
-    compose = name: containers:
-        import ./compose.nix { inherit pkgs name containers; };
+    compose = name: content:
+        saveJSON "${name}.json" content;
 
-    getComposeYml = name: c:
+    getComposeFile = name: c:
         if c ? composeFile then
             { outPath = c.composeFile; name = "docker-compose-${name}.yml"; }
         else if c ? compose then
@@ -40,9 +40,10 @@ let
     in
         lib.mapAttrs (n: c: rec {
             name = n;
-            yml = getComposeYml n c;
+            file = getComposeFile n c;
             autostart = c.autostart || false;
-            hash = unique [ n yml ];
+            deps = if c ? deps then c.deps else [];
+            hash = unique ([ n file ] ++ deps);
         }) composes;
 
     writeScript = name: script:
@@ -94,14 +95,29 @@ let
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" "docker.service" ];
       requires = [ "docker.service" ];
+      path = e.deps;
       serviceConfig = {
         User = stackUser;
-        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.yml}' up --build";
-        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.yml}' stop";
+        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' up --build";
+        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' stop";
         TimeoutStopSec = "20";
       };
     };
     stackServices = mapAttrs' (n: v: nameValuePair ("${prefix}-stack-" + n) (stackServiceFun n v)) manifest;
+
+    dockerComposeScript = e:
+        pkgs.writeScriptBin "${prefix}-compose-${e.name}" ''
+            #!${pkgs.stdenv.shell}
+            ${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' "$@"
+        '';
+
+    systemdScript = e:
+        pkgs.writeScriptBin "${prefix}-systemctl-${e.name}" ''
+            #!${pkgs.stdenv.shell}
+            systemctl $1 ${prefix}-stack-${e.name}
+        '';
+
+    stackCommands = (mapAttrsToList (n: v: dockerComposeScript v) manifest) ++ (mapAttrsToList (n: v: systemdScript v) manifest);
 in {
     options = {
       services.upaas = {
@@ -128,5 +144,6 @@ in {
 
     config = mkIf cfg.enable ({
       systemd.services = { "${prefix}-logger" = loggerService; } // pluginServices // stackServices;
+      environment.systemPackages = stackCommands;
     });
 }

@@ -29,6 +29,9 @@ rec {
     loadJSON = file:
         builtins.fromJSON (builtins.readFile file);
 
+    saveJSON = file: content:
+        builtins.toFile file (builtins.toJSON content);
+
     uniqueFromManifest = name: file:
         let
             o = (loadJSON file);
