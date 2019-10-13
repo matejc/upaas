@@ -6,8 +6,8 @@
 , configFile ? ./config.nix
 , dataDir ? "/var/${prefix}"
 , profileDir ? "${dataDir}/profile"
-, docker_compose ? pkgs.python27Packages.docker_compose
-, supervisor ? pkgs.python27Packages.supervisor
+, docker_compose ? pkgs.docker_compose
+, supervisor ? pkgs.python3Packages.supervisor
 , nix ? pkgs.nix
 , shell ? "${pkgs.bashInteractive}/bin/bash"
 , user

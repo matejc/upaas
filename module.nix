@@ -7,8 +7,8 @@ let
     prefix = "upaas";
     dataDir = "/var/${prefix}";
     profileDir = "${dataDir}/profile";
-    docker_compose = pkgs.python27Packages.docker_compose;
-    supervisor = pkgs.python27Packages.supervisor;
+    docker_compose = pkgs.docker_compose;
+    supervisor = pkgs.python3Packages.supervisor;
     nix = pkgs.nix;
     shell = "${pkgs.bashInteractive}/bin/bash";
     user = cfg.user;
@@ -111,13 +111,21 @@ let
             ${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' "$@"
         '';
 
+    logScript = e:
+        pkgs.writeScriptBin "${prefix}-log-${e.name}" ''
+            #!${pkgs.stdenv.shell}
+            journalctl $1 -u ${prefix}-stack-${e.name}
+        '';
+
     systemdScript = e:
         pkgs.writeScriptBin "${prefix}-systemctl-${e.name}" ''
             #!${pkgs.stdenv.shell}
             systemctl $1 ${prefix}-stack-${e.name}
         '';
 
-    stackCommands = (mapAttrsToList (n: v: dockerComposeScript v) manifest) ++ (mapAttrsToList (n: v: systemdScript v) manifest);
+        stackCommands = (mapAttrsToList (n: v: dockerComposeScript v) manifest) ++
+          (mapAttrsToList (n: v: logScript v) manifest) ++
+          (mapAttrsToList (n: v: systemdScript v) manifest);
 in {
     options = {
       services.upaas = {
