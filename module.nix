@@ -44,6 +44,8 @@ let
             autostart = c.autostart || false;
             deps = if c ? deps then c.deps else [];
             hash = unique ([ n file ] ++ deps);
+            directory = if c ? directory then c.directory else null;
+            user = if c ? user then c.user else cfg.user;
         }) composes;
 
     writeScript = name: script:
@@ -97,9 +99,9 @@ let
       requires = [ "docker.service" ];
       path = e.deps;
       serviceConfig = {
-        User = stackUser;
-        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' up --build";
-        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' -f '${e.file}' stop";
+        User = e.user;
+        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' up --build";
+        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' stop";
         TimeoutStopSec = "20";
       };
     };
