@@ -101,7 +101,7 @@ let
       serviceConfig = {
         User = e.user;
         ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' up --build";
-        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' stop";
+        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' down";
         TimeoutStopSec = "20";
       };
     };
