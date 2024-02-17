@@ -7,7 +7,7 @@ let
     prefix = "upaas";
     dataDir = "/var/${prefix}";
     profileDir = "${dataDir}/profile";
-    docker_compose = pkgs.docker_compose;
+    docker_compose = pkgs.docker-compose;
     supervisor = pkgs.python3Packages.supervisor;
     nix = pkgs.nix;
     shell = "${pkgs.bashInteractive}/bin/bash";
@@ -139,6 +139,14 @@ in {
           '';
         };
 
+        plugins = mkOption {
+          type = types.bool;
+          default = true;
+          description = ''
+            Enable uPAAS plugins.
+          '';
+        };
+
         configuration = mkOption {
           type = types.either types.attrs types.path;
           description = "Configuration or path.";
@@ -153,7 +161,7 @@ in {
     };
 
     config = mkIf cfg.enable ({
-      systemd.services = { "${prefix}-logger" = loggerService; } // pluginServices // stackServices;
+      systemd.services = (optionalAttrs (cfg.plugins) ({ "${prefix}-logger" = loggerService; } // pluginServices)) // stackServices;
       environment.systemPackages = stackCommands;
     });
 }
