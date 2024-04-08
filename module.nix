@@ -100,8 +100,8 @@ let
       path = e.deps;
       serviceConfig = {
         User = e.user;
-        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose --ansi never -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' up --build --no-color";
-        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose --ansi never -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' down";
+        ExecStart = writeScript "${prefix}-stack-${name}-start" "${docker_compose}/bin/docker-compose --ansi never --progress quiet -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' up --build --no-color";
+        ExecStop = writeScript "${prefix}-stack-${name}-stop" "${docker_compose}/bin/docker-compose --ansi never --progress quiet -p '${e.name}' ${optionalString (e.directory != null) "--project-directory '${e.directory}'"} -f '${e.file}' down";
         TimeoutStopSec = "20";
       };
     };
